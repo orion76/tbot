@@ -1,33 +1,31 @@
 import { Module } from '@nestjs/common';
-import { ChanelPostUpdate } from './chanel-post.update';
-import { LoggerModule } from '../logger/logger.module';
+import { MessageSaveMiddleware } from './message-save.middleware';
 import { DatabaseModule } from '../database/database.module';
-import { PostWork } from './post-work';
+import { ChanelPostModule } from '../chanel-post/chanel-post.module';
 import { ControlModule } from '../services/control/control.module';
 import { MessageModule } from '../services/message/message.module';
 import { TagModule } from '../services/tag/tag.module';
+import { SafeThreadHandler } from './save-thread.handler';
 import { AppConfigModule } from '../app-config.module';
-import { MessagesViewModule } from '../services/messages-view/messages-view.module';
-
 
 @Module({
   imports: [
     AppConfigModule,
-    ControlModule,
-    MessageModule,
-    LoggerModule,
     DatabaseModule,
+    ControlModule,
+    ChanelPostModule,
+    MessageModule,
     TagModule,
-    MessagesViewModule
   ],
   providers: [
-    ChanelPostUpdate,
-    // PostWork,
+    MessageSaveMiddleware,
+    SafeThreadHandler
   ],
   exports: [
-    ChanelPostUpdate,
-    // PostWork,
-  ]
+    MessageSaveMiddleware,
+    SafeThreadHandler,
+  ],
 })
-export class ChanelPostModule {
+export class MiddlewaresModule {
+ 
 }

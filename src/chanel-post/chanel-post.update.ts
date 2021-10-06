@@ -1,35 +1,55 @@
-import { Help, InjectBot, On, Start, Update, } from 'nestjs-telegraf';
+import { Action, Command, Help, InjectBot, On, Start, Update, } from 'nestjs-telegraf';
 import { Context, Telegraf } from 'telegraf';
 import { Inject } from '@nestjs/common';
-import { COPY_TO_CHANNEL_SERVICE } from './copy-to-channel.service';
-import { MESSAGE_SERVICE } from '../services/message.service';
+import { MESSAGE_SERVICE } from '../services/message/message.service';
 
 import { ILoggerService } from '../logger/types';
 import { APP_LOGGER } from '../logger/logger-channel-service';
 import { IAppConfig } from '../types/types';
-import { ICopyToChannelService } from './types';
-import { appConfig, BOT_NAME } from '../app.module';
-import { IControlService, IMessageService } from '../services/types';
-import { CONTROL_SERVICE } from '../services/control.service';
+import { BOT_NAME } from '../app.module';
+import { IMessageService, IMessagesViewService, ITagService } from '../services/types';
+import { InjectRepository } from '@nestjs/typeorm';
+import { TgUserRepository } from '../database/repositories/tg-user.repository';
+import { IEntityMessage } from '../database/entities/types';
+import { TAG_SERVICE } from '../services/tag/tag.service';
+import { MessageFormatter } from '../formatter/message.formatter';
+import { TgMessageRepository } from '../database/repositories/tg-message.repository';
+import { AdminMessage } from '../admin-messages';
+import { APP_CONFIG } from '../app-config.module';
+import { MESSAGES_VIEW_SERVICE } from '../services/messages-view/messages-view.service';
 
 @Update()
 export class ChanelPostUpdate {
-  private config: IAppConfig = appConfig;
 
   constructor(
     @InjectBot(BOT_NAME) private readonly bot: Telegraf<Context>,
-    @Inject(COPY_TO_CHANNEL_SERVICE) private copyService: ICopyToChannelService,
-    // @Inject(APP_CONFIG) private config: IAppConfig,
+    @Inject(APP_CONFIG) private config: IAppConfig,
     @Inject(MESSAGE_SERVICE) private messageService: IMessageService,
+    @Inject(TAG_SERVICE) private tagService: ITagService,
+    @Inject(MESSAGES_VIEW_SERVICE) private messageViewService: IMessagesViewService,
     @Inject(APP_LOGGER) private logger: ILoggerService,
-    @Inject(CONTROL_SERVICE) private control: IControlService,
+    @InjectRepository(TgUserRepository) private users: TgUserRepository,
+    @InjectRepository(TgMessageRepository) private messages: TgMessageRepository
   ) {
   }
 
+
   @Start()
-  async onStart(): Promise<string> {
+  async onStart(ctx: Context<any>, next): Promise<string> {
     const me = await this.bot.telegram.getMe();
-    return `Hey, I'm ${me.first_name}`;
+    const {message} = ctx.update;
+    const [start, args] = message.text.split(' ');
+    const [command, username] = args.split('--');
+    switch (command) {
+      case 'welcome':
+        // const tag = 'maininfo';
+        // const messages = this.messages.findByTag(tag, username, 0, 1);
+        const messages = await this.messages.findUserMessages(message.chat.id, 0);
+        this.messageViewService.open(ctx, messages)
+        break;
+      default:
+        return `Hey, I'm ${me.first_name}`;
+    }
   }
 
   @Help()
@@ -38,55 +58,121 @@ export class ChanelPostUpdate {
   }
 
 //
-//   @On(['text'])
-  async onText(reversedText: Context<any>): Promise<any> {
-    await this.messageService.save(reversedText.update.channel_post);
+  @On(['text'] as any)
+  async onText(ctx: Context<any>, next: any): Promise<any> {
+
+    // this.logger.debug('!!!onText\n', ctx.update.message);
+
+    const message = this.messageService.create(ctx.update.message);
+
+    if (true || message.chat.username !== 'orion76') {
+      next(ctx);
+      return;
+    }
+
+    const messages = await this.messages.findUserMessages(message.from.id, 0, 3);
+
+    const output = messages.map((message) => MessageFormatter.anons(message)).join('\n');
+
+
+    await ctx.replyWithHTML(output, {disable_web_page_preview: true});
+    next(ctx);
 
   };
 
-  @On(['channel_post'])
-  async onChannelPost(reversedText: Context<any>): Promise<any> {
-    // const message = TgMessage.build(reversedText.update.channel_post, {include: {all: true}});
-    // await this.messageService.save(message);
+  @On(['message'] as any)
+  async onMessage(ctx: Context<any>, next: any): Promise<any> {
 
-  };
+    // this.logger.debug('!!!onMessage\n', ctx.update.message);
 
-  @On(['message'])
-  async onMessage(reversedText: Context<any>): Promise<any> {
-    this.control.isGoneCrazy();
-    
-    const message_saved = await this.messageService.save(reversedText.update.message);
-    this.logger.debug('!!!onMessage\n', reversedText.update.message);
 
-    // const {config} = this;
+    if (ctx.message.chat.type === 'private') {
+      next(ctx);
+      return;
+    }
+    const message: IEntityMessage = await this.messageService.load(ctx.chat.id, ctx.message.message_id);
 
-    if (message_saved.reply_to_message) {
-      let replyCount = 0;
-      if (message_saved['thread__id']) {
-        replyCount = await this.messageService.countReply(message_saved['thread__id']);
-      }
 
-      if (replyCount > this.config.reply_count) {
-        const thread = await this.messageService.loadById(message_saved['thread__id']);
-        let channel_post = await this.messageService.loadForwarded(thread.chat.id, thread.message_id);
+    next(ctx);
+  }
 
-        if (!channel_post) {
-          await this.copyService.forwardTreadStart(this.config.channel_id, thread, replyCount);
-        } else {
-          await this.copyService.updateTreadStart(thread, channel_post, replyCount);
+
+  /**
+   * COMMANDS
+
+   * welcome - Информация о группе
+   *
+   * @param ctx
+   */
+
+  @Command(['bot'])
+  async commandBotInfo1(ctx: Context<any>) {
+    const bot = await ctx.telegram.getMe();
+    delete bot.id;
+
+    const chat = await ctx.telegram.getChat(this.config.chat_id);
+    const channel = await ctx.telegram.getChat(this.config.channel_id);
+
+    let chat_admin;
+    let channel_admin;
+    try {
+      chat_admin = await ctx.telegram.getChatAdministrators(this.config.chat_id);
+    } catch (e) {
+      chat_admin = e.message;
+    }
+
+    try {
+      channel_admin = await ctx.telegram.getChatAdministrators(this.config.channel_id);
+    } catch (e) {
+      channel_admin = e.message;
+    }
+
+    const info = {
+      bot,
+      chat: {info: chat, admin: chat_admin},
+      channel: {info: channel, admin: channel_admin},
+    }
+
+    await ctx.replyWithHTML('<code>' + JSON.stringify(info, null, 4) + '</code>');
+  }
+
+
+  @Command(['welcome'] as any)
+  async commandWelcome(ctx: Context<any>) {
+    this.logger.debug('commandWelcome', ctx.update);
+    const message: IEntityMessage = ctx.update.message;
+    await ctx.telegram.sendMessage(
+      message.chat.id,
+      AdminMessage.welcome(message.from.username),
+      {
+        reply_markup: {
+          inline_keyboard: [[
+            {
+              text: 'Подробнее о движении',
+              url: `https://t.me/gpbPostBot?start=welcome--${message.chat.username}`
+            },
+          ]]
         }
       }
-    }
+    );
   }
 
-  @On(['edited_channel_post']) onEditedChannelPost(reversedText: Context): void {
-    this.logger.debug('onEditedChannelPost', reversedText);
+
+  @Action([/message_view.*/] as any)
+  async actionMessagesView(ctx: Context<any>) {
+    const {message, data} = ctx.callbackQuery;
+
+    const ids = this.messageViewService.extractCurrentIndex(data);
+    
+    const messages = await this.messages.findUserMessages(message.chat.id);
+    
+    this.messageViewService.navigate(ctx, messages, ids);
+    console.log('+++ action:next\n', ctx.update);
   }
 
-  @On(['edited_message']) onEditedMessage(reversedText: Context): void {
-    this.logger.debug('onEditedMessage', reversedText);
-  }
+
 }
+
 
 /**
  * ["callback_query"] |
@@ -138,54 +224,5 @@ export class ChanelPostUpdate {
  *  ["video"] |
  *  ["video_note"] |
  *  ["voice"] |
- *  [
- *     ("callback_query" |
- *      "channel_post" |
- *  "chat_member" |
- *  "chosen_inline_result" |
- *  "edited_channel_post" |
- *  "edited_message" |
- *  "inline_query" |
- *  "message" |
- *  "my_chat_member" |
- *  "pre_checkout_query" |
- *  "poll_answer" |
- *  "poll" |
- *  "shipping_query" |
- *  "forward_date" |
- *  "channel_chat_created" |
- *  "connected_website" |
- *  "delete_chat_photo" |
- *  "group_chat_created" |
- *  "invoice" |
- *   "left_chat_member" |
- *  "message_auto_delete_timer_changed" |
- *  "migrate_from_chat_id" |
- *  "migrate_to_chat_id" |
- *  "new_chat_members" |
- *  "new_chat_photo" |
- *  "new_chat_title" |
- *  "passport_data" |
- *  "proximity_alert_triggered" |
- *  "pinned_message" |
- *  "successful_payment" |
- *  "supergroup_chat_created" |
- *  "voice_chat_scheduled" |
- *  "voice_chat_started" |
- *  "voice_chat_ended" |
- *  "voice_chat_participants_invited" |
- *  "animation" |
- *  "document" |
- *  "audio" |
- *  "contact" |
- *  "dice" |
- *  "game" |
- *  "location" |
- *  "photo" |
- *  "sticker" |
- *  "text" |
- *  "venue" |
- *  "video" |
- *  "video_note" |
- *  "voice")[]])
+ *
  */

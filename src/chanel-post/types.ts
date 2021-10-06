@@ -1,10 +1,10 @@
-import { TgMessage } from '../database/models/tg-message.model';
 import { InlineKeyboardMarkup } from 'typegram/inline';
+import { IEntityMessage } from '../database/entities/types';
 
 export interface ICopyToChannelService {
-  forwardTreadStart(channel_id: number, thread: TgMessage, reply_count: number);
+  forwardTreadStart(channel_id: number, thread: IEntityMessage, reply_count: number);
 
-  updateTreadStart(thread: TgMessage, channel_post: TgMessage, replyCount: number): Promise<any>;
+  updateTreadStart(thread: IEntityMessage, channel_post: IEntityMessage, replyCount: number): Promise<any>;
 
-  createCommentButtonMarkup(thread: TgMessage, reply_count: number): InlineKeyboardMarkup;
+  createCommentButtonMarkup(thread: IEntityMessage, reply_count: number): InlineKeyboardMarkup;
 }

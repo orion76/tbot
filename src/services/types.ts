@@ -1,36 +1,54 @@
-import { TgMessage } from '../database/models/tg-message.model';
-import { IMessage } from '../types/message';
+import { IEntityMessage, IEntityTag } from '../database/entities/types';
+import { Context } from 'telegraf';
+
 
 export interface ITelegramService {
-  saveNewChats(message: TgMessage);
-
-  saveNewUsers(message: TgMessage);
-
-  replaceAssociation(message: TgMessage, fields: (keyof IMessage)[]);
-
-  saveNotSaved(modelClass: any, fields: string[], id_key: string, message: TgMessage);
 }
 
 export interface IMessageService {
+  load(chatId: number, message_id: number): Promise<IEntityMessage>;
 
-  save(message: IMessage | TgMessage): Promise<TgMessage>;
+  save(message: IEntityMessage): Promise<IEntityMessage>;
 
-  delete(message: TgMessage): Promise<boolean>;
+  create(message: IEntityMessage): IEntityMessage;
 
-  load(chat_id: number, message_id: number): Promise<TgMessage>;
+  countReply(threadId: number): Promise<number>;
 
-  loadById(id: string): Promise<TgMessage>;
+  findOne(id: number): Promise<IEntityMessage>;
 
-  loadForwarded(chat_id: number, message_id: number): Promise<TgMessage>;
+  loadForwarded(chatId: number, message_id: number): Promise<IEntityMessage>;
 
-  countReply(id: string): Promise<number>;
+  saveTags(message: IEntityMessage, tags: IEntityTag[]): Promise<IEntityMessage>;
 
-  createThreadTree(root: TgMessage): Promise<ITreeNode>;
+  findUserMessages(userId: number, start?: number, length?: number): Promise<IEntityMessage[]>;
 }
 
-export interface ITreeNode {
-  message: TgMessage;
-  children: ITreeNode[];
+export interface IMessagesViewService {
+  open(ctx: Context<any>, messages: IEntityMessage[]);
+
+  navigate(ctx: Context<any>, messages: IEntityMessage[], ids: INavigateIds);
+
+  extractCurrentIndex(data: string): INavigateIds;
+}
+
+export interface INavigateIds {
+  prev: number,
+  current: number
+}
+
+export interface ITagService {
+  searchTags(text: string): string[];
+
+  findByTitle(tags: string[]): Promise<Record<string, IEntityTag>>;
+
+  save(tags: string[]): Promise<IEntityTag[]>;
+
+  // load(chatId: number, message_id: number): Promise<IEntityMessage>;
+  // save(message:IEntityMessage):Promise<IEntityMessage>;
+  // create(message:IEntityMessage):IEntityMessage;
+  // countReply(threadId: number):Promise<number>;
+  // findOne(id:number):Promise<IEntityMessage>;
+  // loadForwarded(chatId: number, message_id: number): Promise<IEntityMessage>;
 }
 
 export interface IControlService {

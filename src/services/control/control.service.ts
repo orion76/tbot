@@ -1,9 +1,9 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { IControlService } from './types';
-import { APP_LOGGER } from '../logger/logger-channel-service';
-import { ILoggerService } from '../logger/types';
-import { IAppConfigFlood } from './services.module';
-import { appConfig } from '../app.module';
+import { IControlService } from '../types';
+import { APP_LOGGER } from '../../logger/logger-channel-service';
+import { ILoggerService } from '../../logger/types';
+import { IAppConfigFlood } from '../services.module';
+import { appConfig } from '../../app.module';
 
 
 export const CONTROL_SERVICE = 'CONTROL_SERVICE';

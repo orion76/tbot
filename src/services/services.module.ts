@@ -1,9 +1,7 @@
 import { Module } from '@nestjs/common';
-import { MESSAGE_SERVICE, MessageService } from './message.service';
-import { DatabaseModule } from '../database/database.module';
-import { TELEGRAM_SERVICE, TelegramService } from './telegram.service';
-import { CONTROL_SERVICE, ControlService } from './control.service';
+import { MESSAGE_SERVICE, MessageService } from './message/message.service';
 import { LoggerModule } from '../logger/logger.module';
+import { DatabaseModule } from '../database/database.module';
 
 
 export interface IAppConfigFlood {
@@ -11,18 +9,20 @@ export interface IAppConfigFlood {
   floodCountAvailable: number;
 }
 
+
 @Module({
   imports: [
-    DatabaseModule, LoggerModule
+    DatabaseModule, 
+    LoggerModule,
+    // TypeOrmModule.forFeature([TgMessage,TgUser],'default'),
+    
   ],
   providers: [
-    {provide: TELEGRAM_SERVICE, useClass: TelegramService},
     {provide: MESSAGE_SERVICE, useClass: MessageService},
-    {provide: CONTROL_SERVICE, useClass: ControlService},
   ],
   exports: [
     {provide: MESSAGE_SERVICE, useClass: MessageService},
-    {provide: CONTROL_SERVICE, useClass: ControlService},
+
   ],
 })
 export class ServicesModule {

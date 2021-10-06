@@ -1,5 +1,8 @@
-import { SequelizeOptions } from 'sequelize-typescript/dist/sequelize/sequelize/sequelize-options';
 import { IAppConfigFlood } from '../services/services.module';
+import { TypeOrmModuleOptions } from '@nestjs/typeorm/dist/interfaces/typeorm-options.interface';
+import { Context } from 'telegraf';
+import { Deunionize } from 'telegraf/src/deunionize';
+import * as tg from 'telegraf/src/core/types/typegram';
 
 
 export interface IBotConfig {
@@ -12,7 +15,15 @@ export interface IAppConfig {
   chat_id: number,
   channel_id: number,
   reply_count: number,
-  database: SequelizeOptions,
-  flood: IAppConfigFlood
+  database: TypeOrmModuleOptions,
+  flood: IAppConfigFlood,
 }
 
+export interface ISessionData {
+  currentPage: number;
+}
+
+
+export interface IContext<T extends Deunionize<tg.Update> = tg.Update> extends Context<T> {
+  session?: ISessionData;
+}
