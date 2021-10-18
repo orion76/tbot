@@ -1,6 +1,14 @@
 import { IEntityMessage, IEntityTag } from '../database/entities/types';
 import { Context } from 'telegraf';
 
+export interface IMessagesViewPagerData {
+  first: number;
+  last: number;
+  item: number;
+  page: number
+  pages_count: number;
+  per_page: number;
+}
 
 export interface ITelegramService {
 }
@@ -24,16 +32,27 @@ export interface IMessageService {
 }
 
 export interface IMessagesViewService {
-  open(ctx: Context<any>, messages: IEntityMessage[]);
 
-  navigate(ctx: Context<any>, messages: IEntityMessage[], ids: INavigateIds);
+  startMessagesView(ctx: Context<any>, tag: string);
 
-  extractCurrentIndex(data: string): INavigateIds;
+  sendTagMessagesView(ctx: Context<any>, tag: string, page: number, item: number);
+
 }
 
-export interface INavigateIds {
-  prev: number,
-  current: number
+
+export type TActions = 'view';
+
+export interface IActionViewTag {
+  tag: string,
+  page: number,
+  message_id?: number
+}
+
+
+export interface IActionResponse {
+  action: TActions;
+  type:string,
+  data: any
 }
 
 export interface ITagService {

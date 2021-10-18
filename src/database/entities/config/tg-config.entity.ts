@@ -1,5 +1,5 @@
 import { Column, Entity } from 'typeorm';
-import { ITgConfig } from './types';
+import { ITgConfig } from '../types';
 
 
 @Entity()

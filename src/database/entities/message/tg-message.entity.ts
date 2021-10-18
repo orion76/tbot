@@ -1,10 +1,10 @@
-import { TgEntity } from '../tg-entity';
+import { TgEntity } from '../../tg-entity';
 import { BeforeInsert, BeforeUpdate, Column, Entity, Index, JoinColumn, JoinTable, ManyToMany, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
-import { Tag } from './tag.entity';
+import { Tag } from '../tag.entity';
 import { MessageType } from './message-type.entity';
-import { IEntityChat, IEntityMessage, IEntityUser, IEntityTag } from './types';
-import { TgChat } from './tg-chat.entity';
-import { TgUser } from './tg-user.entity';
+import { IEntityChat, IEntityMessage, IEntityUser, IEntityTag } from '../types';
+import { TgChat } from '../tg-chat.entity';
+import { TgUser } from '../tg-user.entity';
 
 
 @Entity()
@@ -31,7 +31,7 @@ export class TgMessage extends TgEntity<IEntityMessage> implements IEntityMessag
   @Column({type:'longtext'})
   text: string;
 
-  @ManyToMany(() => Tag)
+  @ManyToMany(() => Tag,{cascade: ['insert', 'update']})
   @JoinTable()
   tags: IEntityTag[]
 

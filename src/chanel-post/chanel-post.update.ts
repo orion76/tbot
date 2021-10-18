@@ -10,13 +10,14 @@ import { BOT_NAME } from '../app.module';
 import { IMessageService, IMessagesViewService, ITagService } from '../services/types';
 import { InjectRepository } from '@nestjs/typeorm';
 import { TgUserRepository } from '../database/repositories/tg-user.repository';
-import { IEntityMessage } from '../database/entities/types';
+import { IEntityChat, IEntityMessage, IEntityUser } from '../database/entities/types';
 import { TAG_SERVICE } from '../services/tag/tag.service';
 import { MessageFormatter } from '../formatter/message.formatter';
 import { TgMessageRepository } from '../database/repositories/tg-message.repository';
 import { AdminMessage } from '../admin-messages';
 import { APP_CONFIG } from '../app-config.module';
 import { MESSAGES_VIEW_SERVICE } from '../services/messages-view/messages-view.service';
+import { ActionResponse, EAction, EActionViewType } from '../common/action-response';
 
 @Update()
 export class ChanelPostUpdate {
@@ -42,11 +43,11 @@ export class ChanelPostUpdate {
     const [command, username] = args.split('--');
     switch (command) {
       case 'welcome':
-        // const tag = 'maininfo';
-        // const messages = this.messages.findByTag(tag, username, 0, 1);
-        const messages = await this.messages.findUserMessages(message.chat.id, 0);
-        this.messageViewService.open(ctx, messages)
+        await this.messageViewService.startMessagesView(ctx, 'groupinfo');
         break;
+      case 'botinfo':
+        await this.messageViewService.startMessagesView(ctx, 'botinfo');
+        break
       default:
         return `Hey, I'm ${me.first_name}`;
     }
@@ -105,8 +106,8 @@ export class ChanelPostUpdate {
    * @param ctx
    */
 
-  @Command(['bot'])
-  async commandBotInfo1(ctx: Context<any>) {
+  @Command(['botdebug'] as any)
+  async commandBotDebug(ctx: Context<any>) {
     const bot = await ctx.telegram.getMe();
     delete bot.id;
 
@@ -141,15 +142,23 @@ export class ChanelPostUpdate {
   async commandWelcome(ctx: Context<any>) {
     this.logger.debug('commandWelcome', ctx.update);
     const message: IEntityMessage = ctx.update.message;
+    await this.showWelcome(ctx, message.chat, [message.from])
+  }
+
+  async showWelcome(ctx: Context<any>, chat: IEntityChat, users: IEntityUser[]) {
+    this.logger.debug('commandWelcome', ctx.update);
+
+    const names = users.map(this.getUserName);
+
     await ctx.telegram.sendMessage(
-      message.chat.id,
-      AdminMessage.welcome(message.from.username),
+      chat.id,
+      AdminMessage.welcome(names.join(', ')),
       {
         reply_markup: {
           inline_keyboard: [[
             {
               text: 'Подробнее о движении',
-              url: `https://t.me/gpbPostBot?start=welcome--${message.chat.username}`
+              url: `https://t.me/gpbPostBot?start=welcome--${chat.username}`
             },
           ]]
         }
@@ -157,20 +166,78 @@ export class ChanelPostUpdate {
     );
   }
 
+  @Command(['botinfo'] as any)
+  async commandBotInfo(ctx: Context<any>) {
+    this.logger.debug('commandBotInfo', ctx.update);
+    const message: IEntityMessage = ctx.message;
+    await ctx.telegram.sendMessage(
+      message.chat.id,
+      AdminMessage.botinfo(),
+      {
+        reply_markup: {
+          inline_keyboard: [[
+            {
+              text: 'Бот - руководство пользователя',
+              url: `https://t.me/gpbPostBot?start=botinfo`
+            },
+          ]]
+        }
+      }
+    );
+  }
 
-  @Action([/message_view.*/] as any)
+  @Action([/.*/] as any)
   async actionMessagesView(ctx: Context<any>) {
     const {message, data} = ctx.callbackQuery;
 
-    const ids = this.messageViewService.extractCurrentIndex(data);
-    
-    const messages = await this.messages.findUserMessages(message.chat.id);
-    
-    this.messageViewService.navigate(ctx, messages, ids);
-    console.log('+++ action:next\n', ctx.update);
+    const response = ActionResponse.encode(data);
+
+    const {action, type} = response;
+    switch (Number(action)) {
+      case EAction.VIEW:
+        switch (Number(type)) {
+          case EActionViewType.TAG:
+            const {tag, page, message_id} = ActionResponse.encodeViewTag(response.data);
+            await this.messageViewService.sendTagMessagesView(ctx, tag, Number(page), Number(message_id));
+
+            break;
+        }
+        break;
+    }
+  }
+
+  @On(['chat_member'] as any)
+  async onChatMember(ctx: Context<any>, next: any): Promise<any> {
+
+    console.log('>>> chat_member\n', ctx.update);
+    next(ctx);
   }
 
 
+  @On(['my_chat_member'] as any)
+  async onMyChatMember(ctx: Context<any>, next: any): Promise<any> {
+
+    console.log('>>> my_chat_member\n', ctx.update);
+    next(ctx);
+  }
+
+
+  @On(['left_chat_member'] as any)
+  async onLeftChatMember(ctx: Context<any>, next: any): Promise<any> {
+
+    console.log('>>> left_chat_member\n', ctx.update);
+    next(ctx);
+  }
+
+  getUserName(user:IEntityUser){
+    return user.first_name || user.username;
+  }
+
+  @On(['new_chat_members'] as any)
+  async onNewChatMembers(ctx: Context<any>, next: any): Promise<any> {
+let n=0;
+    await this.showWelcome(ctx, ctx.chat, ctx.message.new_chat_members);
+  }
 }
 
 

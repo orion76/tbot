@@ -2,7 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { MiddlewareFn, MiddlewareObj } from 'telegraf/typings/middleware';
 import { Context } from 'telegraf';
 import { IEntityMessage } from '../database/entities/types';
-import { IAppConfig } from '../types/types';
+import { IAppConfig, IContext } from '../types/types';
 import { CONTROL_SERVICE } from '../services/control/control.service';
 import { IControlService, IMessageService, ITagService } from '../services/types';
 import { MESSAGE_SERVICE } from '../services/message/message.service';
@@ -95,7 +95,7 @@ export class MessageSaveMiddleware implements MiddlewareObj<any> {
   middleware(handlers?: IMessageHandler[]): MiddlewareFn<any> {
     const _this = this;
     console.log('middleware()');
-    return async (ctx: Context<any>, next: any) => {
+    return async (ctx: IContext<any>, next: any) => {
       this.control.isGoneCrazy();
 
 
@@ -103,6 +103,12 @@ export class MessageSaveMiddleware implements MiddlewareObj<any> {
         next(ctx);
         return;
       }
+// try{
+//   await ctx.editMessageReplyMarkup({inline_keyboard:[[{text:'test',callback_data:'test'}]]});  
+// }catch (e) {
+//   console.log('[editMessageText]',e);
+// }
+
 
       const message = this.messages.create(ctx.message as DeepPartial<IEntityMessage>);
       if (ctx.message.photo) {
@@ -110,7 +116,11 @@ export class MessageSaveMiddleware implements MiddlewareObj<any> {
       }
       //
       // // const ttt= await this.users.findOne({where:{id:In([message.from.id])}});
-      await this.messageService.save(message);
+      ctx.msg = await this.messageService.save(message);
+
+      if (!ctx.msg) {
+        return;
+      }
 
       if (handlers) {
         for (const handler of handlers) {
@@ -125,6 +135,11 @@ export class MessageSaveMiddleware implements MiddlewareObj<any> {
   }
 
   isChatMessage(message: IEntityMessage) {
+    // console.log('isChatMessage', message);
+    if (message?.new_chat_members || message?.left_chat_member || message?.chat_member || message?.me_chat_member) {
+      console.log('isChatMessage', 'Chat members update')
+      return false;
+    }
     return message?.chat && message?.chat.type === 'supergroup';
   }
 }

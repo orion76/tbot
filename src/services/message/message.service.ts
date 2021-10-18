@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { ConflictException, Inject, Injectable } from '@nestjs/common';
 import { IMessageService } from '../types';
 import { InjectRepository } from '@nestjs/typeorm';
 import { TgUserRepository } from '../../database/repositories/tg-user.repository';
@@ -48,8 +48,6 @@ export class MessageService implements IMessageService {
   async save(message: IEntityMessage): Promise<IEntityMessage> {
 
     this.fixReferencesId(message);
-
-
 
     try {
       await this.replaceExistMessageReferences(message);

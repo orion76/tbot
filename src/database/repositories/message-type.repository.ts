@@ -1,5 +1,5 @@
 import { EntityRepository } from 'typeorm';
-import { MessageType } from '../entities/message-type.entity';
+import { MessageType } from '../entities/message/message-type.entity';
 import { BaseRepository } from './base.repository';
 
 @EntityRepository(MessageType)

@@ -19,8 +19,8 @@ export interface IEntityUser extends IEntity {
 }
 
 export interface IEntityPhoto extends IEntity {
-  file_id:string,
-  file_unique_id:string,
+  file_id: string,
+  file_unique_id: string,
   file_size: number,
   width: number,
   height: number
@@ -52,6 +52,11 @@ export interface IEntityMessage extends IEntity {
   getMessages(): IEntityMessage[];
 
   getUsers(): IEntityUser[];
+
+  new_chat_members?:IEntityUser[];
+  left_chat_member?:IEntityUser;
+  chat_member?:IEntityUser;
+  me_chat_member?:IEntityUser;
 }
 
 export interface IEntityTag extends IEntity {
@@ -59,10 +64,12 @@ export interface IEntityTag extends IEntity {
   parent: IEntityTag;
 }
 
+export interface IEntityUnitUser extends IEntity {
+  user: IEntityUser[];
+}
+
 
 export interface ITgConfig extends IEntity {
-
-
   chat_id: number;
   channel_id: number;
   config: string;

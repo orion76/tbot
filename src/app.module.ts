@@ -13,6 +13,7 @@ import { TagModule } from './services/tag/tag.module';
 import { IMessageHandler } from './middlewares/types';
 import { SafeThreadHandler } from './middlewares/save-thread.handler';
 import { AppConfigModule } from './app-config.module';
+import { SafeTagHandler } from './middlewares/save-tag.handler';
 
 const getConfig = () => {
   return process.env.NODE_ENV === 'prod' ? require('../environment/prod') : require('../environment/dev')
@@ -40,6 +41,8 @@ console.log('[appConfig]\n', appConfig);
         middlewares: [
           (ctx: IContext<any>, next: any) => {
             console.log('START');
+            // console.log('START',JSON.stringify(Array.from(Object.keys(ctx.update))));
+            // console.log('START',JSON.stringify(ctx.update.callback_query,null,2));
             next(ctx);
           },
           // (new LocalSession({database: 'example_db.json', property: 'session'})).middleware(),
@@ -51,7 +54,8 @@ console.log('[appConfig]\n', appConfig);
       }),
       inject: [
         MessageSaveMiddleware,
-        SafeThreadHandler
+        SafeThreadHandler,
+        SafeTagHandler
       ]
     }),
     TypeOrmModule.forRootAsync({useFactory: () => appConfig.database}),

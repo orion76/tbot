@@ -9,7 +9,7 @@ export class MessageType {
   @Column()
   title: string;
 
-  @Column({length: 512, default: ''})
+  @Column({type:'text'})
   description: string;
 
 }

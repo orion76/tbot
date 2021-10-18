@@ -1,7 +1,7 @@
 import { BeforeInsert, Column, Entity, Index, OneToMany } from 'typeorm';
 import { TgEntity } from '../tg-entity';
 import { IEntityMessage, IEntityUser } from './types';
-import { TgMessage } from './tg-message.entity';
+import { TgMessage } from './message/tg-message.entity';
 
 
 @Entity()

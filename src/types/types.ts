@@ -3,6 +3,7 @@ import { TypeOrmModuleOptions } from '@nestjs/typeorm/dist/interfaces/typeorm-op
 import { Context } from 'telegraf';
 import { Deunionize } from 'telegraf/src/deunionize';
 import * as tg from 'telegraf/src/core/types/typegram';
+import { IEntityMessage } from '../database/entities/types';
 
 
 export interface IBotConfig {
@@ -26,4 +27,5 @@ export interface ISessionData {
 
 export interface IContext<T extends Deunionize<tg.Update> = tg.Update> extends Context<T> {
   session?: ISessionData;
+  msg?:IEntityMessage;
 }

@@ -7,6 +7,7 @@ import { MessageModule } from '../services/message/message.module';
 import { TagModule } from '../services/tag/tag.module';
 import { SafeThreadHandler } from './save-thread.handler';
 import { AppConfigModule } from '../app-config.module';
+import { SafeTagHandler } from './save-tag.handler';
 
 @Module({
   imports: [
@@ -19,11 +20,13 @@ import { AppConfigModule } from '../app-config.module';
   ],
   providers: [
     MessageSaveMiddleware,
-    SafeThreadHandler
+    SafeThreadHandler,
+    SafeTagHandler
   ],
   exports: [
     MessageSaveMiddleware,
     SafeThreadHandler,
+    SafeTagHandler,
   ],
 })
 export class MiddlewaresModule {

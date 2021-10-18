@@ -2,7 +2,6 @@ import { Module } from '@nestjs/common';
 import { ChanelPostUpdate } from './chanel-post.update';
 import { LoggerModule } from '../logger/logger.module';
 import { DatabaseModule } from '../database/database.module';
-import { PostWork } from './post-work';
 import { ControlModule } from '../services/control/control.module';
 import { MessageModule } from '../services/message/message.module';
 import { TagModule } from '../services/tag/tag.module';
@@ -22,11 +21,9 @@ import { MessagesViewModule } from '../services/messages-view/messages-view.modu
   ],
   providers: [
     ChanelPostUpdate,
-    // PostWork,
   ],
   exports: [
     ChanelPostUpdate,
-    // PostWork,
   ]
 })
 export class ChanelPostModule {

@@ -12,7 +12,7 @@ export class Tag implements IEntityTag {
   @Column()
   title: string;
 
-  @Column({length: 512, default: ''})
+  @Column({type:'text'})
   description: string;
 
   @TreeChildren()
